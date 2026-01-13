@@ -65,6 +65,11 @@ func (s *Sqlite) GetStudentById(id int64) (types.Student, error) {
 	var student types.Student
 
 	err = stmt.QueryRow(id).Scan(&student.Id, &student.Name, &student.Age, &student.Email)
+	//stmt.QueryRow(id) → SQL execute करके 1 row return करता है
+
+	// .Scan(&pointer1, &pointer2, &pointer3, &pointer4) → Row के 4 columns को 4 variables में copy करता है
+
+	// & → memory address pass करता है ताकि original variables update हो सकें
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -73,4 +78,28 @@ func (s *Sqlite) GetStudentById(id int64) (types.Student, error) {
 		return types.Student{}, fmt.Errorf("query Error: %w", err)
 	}
 	return student, nil
+}
+func (s *Sqlite) GetStudents() ([]types.Student, error) {
+	stmt, error := s.Db.Prepare("select id , name , age , email from students")
+	if error != nil {
+		return nil, error
+	}
+	defer stmt.Close()
+	//stmt.Query() prepared statement से multiple rows fetch करने के लिए use होता है
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var students []types.Student
+
+	for rows.Next() {
+		var student types.Student
+		error := rows.Scan(&student.Id, &student.Name, &student.Age, &student.Email)
+		if error != nil {
+			return nil, error
+		}
+		students = append(students, student)
+	}
+	return students, nil
 }
